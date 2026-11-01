@@ -149,7 +149,8 @@ main { flex: 1 0 auto; display: flex; flex-direction: column; gap: 12px; padding
   display: flex; flex-direction: column; gap: 12px; align-self: start;
   padding: 14px; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--radius);
 }
-.disc { position: relative; width: 100%; aspect-ratio: 1; }
+/* A rotating square's corners stick out past its box; clip them, or the page gains scrollable width at some angles. */
+.disc { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; }
 .disc-layer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .disc-layer[hidden] { display: none; }
 .disc-body { will-change: transform; }
