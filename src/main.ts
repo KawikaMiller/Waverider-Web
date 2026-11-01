@@ -2,8 +2,11 @@ import "./style.css";
 import { AudioEngine, AudioError, SourceKind } from "./audio/engine";
 import { applyTheme, BUILT_IN_THEMES, randomTheme, Theme } from "./theme/theme";
 import { createVisualizers } from "./viz";
+import { VisualizerSwitcher } from "./viz/switcher";
 
 const VIZ_KEY = "waverider-visualizer";
+const AUTO_VALUE = "auto";
+const INTERVAL_KEY = "waverider-auto-interval";
 const THEME_KEY = "waverider-theme";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -14,6 +17,9 @@ const status = $("status");
 const dot = $("dot");
 const supportNote = $("support-note");
 const vizSelect = $<HTMLSelectElement>("visualizer");
+const autoOptions = $("auto-options");
+const autoInterval = $<HTMLSelectElement>("auto-interval");
+const nextViz = $<HTMLButtonElement>("next-viz");
 const themeSelect = $<HTMLSelectElement>("theme");
 const fileInput = $<HTMLInputElement>("file");
 const playPause = $<HTMLButtonElement>("playpause");
@@ -21,7 +27,7 @@ const stopButton = $<HTMLButtonElement>("stop");
 
 const engine = new AudioEngine();
 const visualizers = createVisualizers();
-let visualizer = visualizers[0];
+const switcher = new VisualizerSwitcher(visualizers);
 let theme: Theme = BUILT_IN_THEMES[0];
 const themes: Theme[] = [...BUILT_IN_THEMES];
 
@@ -63,14 +69,56 @@ $("shuffle").addEventListener("click", () => {
 });
 
 // ---- visualizer ----
-vizSelect.replaceChildren(...visualizers.map((v, i) => new Option(v.name, String(i))));
-const savedViz = visualizers.find((v) => v.name === read(VIZ_KEY));
-if (savedViz) visualizer = savedViz;
-vizSelect.value = String(visualizers.indexOf(visualizer));
-vizSelect.addEventListener("change", () => {
-  visualizer = visualizers[Number(vizSelect.value)];
-  write(VIZ_KEY, visualizer.name);
+// "Auto" rotates through the visualizers on a timer, like the old Windows Media Player did.
+// It is the default, so a first visit shows the variety.
+vizSelect.replaceChildren(
+  new Option("Auto (switch automatically)", AUTO_VALUE),
+  ...visualizers.map((v, i) => new Option(v.name, String(i))),
+);
+
+function syncVisualizerUi(): void {
+  vizSelect.value = switcher.auto ? AUTO_VALUE : String(visualizers.indexOf(switcher.current));
+  autoOptions.hidden = !switcher.auto;
+  nextViz.hidden = !switcher.auto;
+}
+
+/** Shows which visualizer Auto is currently on, only touching the DOM when it changes. */
+let autoLabel = "";
+function updateAutoLabel(): void {
+  const label = switcher.auto ? `Auto: ${switcher.current.name}` : "Auto (switch automatically)";
+  if (label === autoLabel) return;
+  autoLabel = label;
+  vizSelect.options[0].text = label;
+}
+
+function chooseVisualizer(value: string): void {
+  if (value === AUTO_VALUE) {
+    switcher.enableAuto(performance.now());
+    write(VIZ_KEY, AUTO_VALUE);
+  } else {
+    const picked = visualizers[Number(value)];
+    switcher.select(picked);
+    write(VIZ_KEY, picked.name);
+  }
+  syncVisualizerUi();
+}
+
+const savedInterval = Number(read(INTERVAL_KEY));
+if ([10, 20, 30, 60].includes(savedInterval)) switcher.intervalSec = savedInterval;
+autoInterval.value = String(switcher.intervalSec);
+
+const savedViz = read(VIZ_KEY);
+const pinned = visualizers.find((v) => v.name === savedViz);
+if (pinned) switcher.select(pinned);
+else switcher.enableAuto(performance.now()); // nothing saved, or "auto"
+syncVisualizerUi();
+
+vizSelect.addEventListener("change", () => chooseVisualizer(vizSelect.value));
+autoInterval.addEventListener("change", () => {
+  switcher.setInterval(Number(autoInterval.value), performance.now());
+  write(INTERVAL_KEY, autoInterval.value);
 });
+nextViz.addEventListener("click", () => switcher.advance(performance.now()));
 
 // ---- canvas sizing ----
 const ctx = canvas.getContext("2d")!;
@@ -187,10 +235,40 @@ stage.addEventListener("drop", (e) => {
 });
 
 // ---- render loop ----
+// While auto mode crossfades, both visualizers draw into offscreen canvases that are blended onto the stage.
+const fadeA = document.createElement("canvas");
+const fadeB = document.createElement("canvas");
+const fadeCtxA = fadeA.getContext("2d")!;
+const fadeCtxB = fadeB.getContext("2d")!;
+
 const t0 = performance.now();
 function frame(now: number): void {
   resize();
-  visualizer.render(ctx, canvas.width, canvas.height, engine.frame(), theme, (now - t0) / 1000);
+  const w = canvas.width;
+  const h = canvas.height;
+  const audio = engine.frame();
+  const t = (now - t0) / 1000;
+
+  switcher.update(now);
+  const outgoing = switcher.previous;
+  if (outgoing) {
+    for (const c of [fadeA, fadeB]) {
+      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    }
+    outgoing.render(fadeCtxA, w, h, audio, theme, t);
+    switcher.current.render(fadeCtxB, w, h, audio, theme, t);
+    const p = switcher.fadeProgress(now);
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalAlpha = 1 - p;
+    ctx.drawImage(fadeA, 0, 0);
+    ctx.globalAlpha = p;
+    ctx.drawImage(fadeB, 0, 0);
+    ctx.globalAlpha = 1;
+  } else {
+    switcher.current.render(ctx, w, h, audio, theme, t);
+  }
+
+  updateAutoLabel();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

@@ -9,7 +9,8 @@ It reacts to whatever audio you give it, with no install:
 - **Demo track**: a short loop synthesized in the browser, so there is something to see with one click and no permissions.
 
 Eight visualizers (Bars, Waveform, Radial, Spectrogram, Particles, Tunnel, Plasma, Starfield), four built-in themes and a
-Shuffle Colors button, all ported from the desktop app.
+Shuffle Colors button, all ported from the desktop app. **Auto** mode (the default) switches between the visualizers on a
+timer, with a crossfade, like the old Windows Media Player did; pick one from the list to pin it.
 
 This is a demo. The Windows app adds per-app audio capture, now-playing with album art and transport controls, the
 spinning vinyl / CD disc, mini players, custom visualizer and theme editors, and optional Spotify sign-in.
@@ -33,6 +34,7 @@ Browsers only start audio after a click, which is why nothing plays until a sour
 | FFT bands, bass / mid / treble, beat detection (port of the app's `FftAnalyzer`) | `src/audio/analyzer.ts` |
 | Synthesized demo loop | `src/audio/demo.ts` |
 | Visualizers (Canvas 2D ports of the app's SkiaSharp ones) | `src/viz/` |
+| Auto mode: shuffled rotation and crossfade | `src/viz/switcher.ts` |
 | Themes and the random palette generator | `src/theme/theme.ts` |
 
 Captured system audio and the microphone are analyzed but deliberately not routed to the speakers, so you never hear them twice.
