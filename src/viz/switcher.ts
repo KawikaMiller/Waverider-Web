@@ -2,6 +2,10 @@ import type { Visualizer } from "./types";
 
 export const FADE_MS = 900;
 
+/** How long Auto stays on one visualizer: long enough to enjoy it, like the old Media Player. */
+export const INTERVALS_SEC = [120, 180, 300, 600];
+export const DEFAULT_INTERVAL_SEC = 180;
+
 /**
  * Chooses which visualizer to draw. In auto mode it moves to a different one every `intervalSec`
  * seconds, working through a shuffled bag so every visualizer is shown before any repeats, and
@@ -9,7 +13,7 @@ export const FADE_MS = 900;
  */
 export class VisualizerSwitcher {
   auto = false;
-  intervalSec = 20;
+  intervalSec = DEFAULT_INTERVAL_SEC;
   current: Visualizer;
   previous?: Visualizer;
 

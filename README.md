@@ -9,8 +9,8 @@ It reacts to whatever audio you give it, with no install:
 - **Demo track**: a short loop synthesized in the browser, so there is something to see with one click and no permissions.
 
 Eight visualizers (Bars, Waveform, Radial, Spectrogram, Particles, Tunnel, Plasma, Starfield), four built-in themes and a
-Shuffle Colors button, all ported from the desktop app. **Auto** mode (the default) switches between the visualizers on a
-timer, with a crossfade, like the old Windows Media Player did; pick one from the list to pin it.
+Shuffle Colors button, all ported from the desktop app. **Auto** mode (the default) switches between the visualizers every few
+minutes (2, 3, 5 or 10; 3 by default), with a crossfade, like the old Windows Media Player did; pick one from the list to pin it.
 
 This is a demo. The Windows app adds per-app audio capture, now-playing with album art and transport controls, the
 spinning vinyl / CD disc, mini players, custom visualizer and theme editors, and optional Spotify sign-in.

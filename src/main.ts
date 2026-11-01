@@ -2,7 +2,7 @@ import "./style.css";
 import { AudioEngine, AudioError, SourceKind } from "./audio/engine";
 import { applyTheme, BUILT_IN_THEMES, randomTheme, Theme } from "./theme/theme";
 import { createVisualizers } from "./viz";
-import { VisualizerSwitcher } from "./viz/switcher";
+import { INTERVALS_SEC, VisualizerSwitcher } from "./viz/switcher";
 
 const VIZ_KEY = "waverider-visualizer";
 const AUTO_VALUE = "auto";
@@ -104,7 +104,7 @@ function chooseVisualizer(value: string): void {
 }
 
 const savedInterval = Number(read(INTERVAL_KEY));
-if ([10, 20, 30, 60].includes(savedInterval)) switcher.intervalSec = savedInterval;
+if (INTERVALS_SEC.includes(savedInterval)) switcher.intervalSec = savedInterval;
 autoInterval.value = String(switcher.intervalSec);
 
 const savedViz = read(VIZ_KEY);
