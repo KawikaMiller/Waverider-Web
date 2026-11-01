@@ -21,8 +21,8 @@ Player did; pick one from the list to pin it.
 - **Compatible with the Windows app.** Visualizer and theme files use the same JSON as the desktop app, so you can export from one
   and import into the other.
 
-This is a demo. The Windows app adds per-app audio capture, now-playing with album art and transport controls, the
-mini players, now-playing album art on the disc, and optional Spotify sign-in.
+This is a demo. The Windows app adds per-app audio capture, now-playing with album art (on the disc too) and transport
+controls, mini players, and optional Spotify sign-in.
 
 ## Develop
 
