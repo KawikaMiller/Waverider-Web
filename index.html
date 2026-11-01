@@ -19,6 +19,10 @@
           <span class="sr-only">Theme</span>
           <select id="theme" aria-label="Theme"></select>
         </label>
+        <button id="customize-theme" type="button" class="btn" title="Edit this theme, or copy a built-in one to edit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.7 1.5-1.4 0-.5-.3-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.5 1.7-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z M7.5 12.5h.01 M10 8h.01 M14.5 8h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Customize theme</span>
+        </button>
         <button id="shuffle" type="button" class="btn" title="Random colors">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Shuffle colors</span>
@@ -29,7 +33,7 @@
     <div class="banner" role="note">
       <p>
         <strong>This is a web demo.</strong> The Windows app adds per-app audio capture, now-playing with album
-        art and controls, the spinning disc, mini players and Spotify sign-in.
+        art and controls, mini players and Spotify sign-in.
       </p>
       <a class="btn primary" id="download" href="https://github.com/KawikaMiller/Waverider" target="_blank" rel="noopener noreferrer">
         Get Waverider for Windows <span class="sr-only">(opens in a new tab)</span>
@@ -37,33 +41,52 @@
     </div>
 
     <main>
-      <section class="stage" id="stage" aria-label="Visualizer">
-        <canvas id="canvas" role="img" aria-label="Audio visualization"></canvas>
+      <div class="workspace">
+        <section class="stage" id="stage" aria-label="Visualizer">
+          <canvas id="canvas" role="img" aria-label="Audio visualization"></canvas>
 
-        <div class="overlay" id="start">
-          <h1>Pick something to listen to</h1>
-          <p class="lede">Waverider reacts to whatever audio you give it.</p>
-          <div class="sources">
-            <button type="button" class="source" data-source="system">
-              <strong>System audio</strong>
-              <span>Whatever your PC is playing: Spotify, YouTube, a game. Chrome or Edge on Windows.</span>
-            </button>
-            <button type="button" class="source" data-source="mic">
-              <strong>Microphone</strong>
-              <span>Music playing in the room.</span>
-            </button>
-            <button type="button" class="source" data-source="file">
-              <strong>Audio file</strong>
-              <span>Choose a file, or drop one here.</span>
-            </button>
-            <button type="button" class="source" data-source="demo">
-              <strong>Demo track</strong>
-              <span>A built-in loop. One click, no permissions.</span>
-            </button>
+          <div class="overlay" id="start">
+            <h1>Pick something to listen to</h1>
+            <p class="lede">Waverider reacts to whatever audio you give it.</p>
+            <div class="sources">
+              <button type="button" class="source" data-source="system">
+                <strong>System audio</strong>
+                <span>Whatever your PC is playing: Spotify, YouTube, a game. Chrome or Edge on Windows.</span>
+              </button>
+              <button type="button" class="source" data-source="mic">
+                <strong>Microphone</strong>
+                <span>Music playing in the room.</span>
+              </button>
+              <button type="button" class="source" data-source="file">
+                <strong>Audio file</strong>
+                <span>Choose a file, or drop one here.</span>
+              </button>
+              <button type="button" class="source" data-source="demo">
+                <strong>Demo track</strong>
+                <span>A built-in loop. One click, no permissions.</span>
+              </button>
+            </div>
+            <p class="note" id="support-note" hidden></p>
           </div>
-          <p class="note" id="support-note" hidden></p>
-        </div>
-      </section>
+
+          <aside class="drawer" id="drawer" hidden aria-label="Editor">
+            <div id="drawer-body"></div>
+          </aside>
+        </section>
+
+        <aside class="disc-card" aria-label="Spinning disc">
+          <div class="disc" id="disc" role="img" aria-label="A spinning record that turns while audio plays"></div>
+          <div class="disc-controls">
+            <label class="row"><span>Disc</span>
+              <select id="disc-skin"><option value="Vinyl">Vinyl record</option><option value="Cd">Compact disc</option></select>
+            </label>
+            <label class="row"><span>Shows</span>
+              <select id="disc-face"><option value="Art">Label art</option><option value="Visualizer">The visualizer</option></select>
+            </label>
+            <label class="check" id="disc-spin-row" hidden><input type="checkbox" id="disc-spin" /><span>Visualizer turns with the disc</span></label>
+          </div>
+        </aside>
+      </div>
 
       <section class="controls" aria-label="Controls">
         <div class="now" aria-live="polite">
@@ -85,6 +108,7 @@
             </select>
           </label>
           <button type="button" class="btn small" id="next-viz" hidden>Next visualizer</button>
+          <button type="button" class="btn small" id="customize-viz" title="Edit this visualizer, or copy it to customize">Customize</button>
           <div class="source-switch" role="group" aria-label="Audio source">
             <button type="button" class="btn small" data-source="system">System</button>
             <button type="button" class="btn small" data-source="mic">Mic</button>

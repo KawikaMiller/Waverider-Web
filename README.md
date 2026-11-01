@@ -8,12 +8,21 @@ It reacts to whatever audio you give it, with no install:
 - **Audio file**: choose one or drop it onto the stage.
 - **Demo track**: a short loop synthesized in the browser, so there is something to see with one click and no permissions.
 
-Eight visualizers (Bars, Waveform, Radial, Spectrogram, Particles, Tunnel, Plasma, Starfield), four built-in themes and a
-Shuffle Colors button, all ported from the desktop app. **Auto** mode (the default) switches between the visualizers every few
-minutes (2, 3, 5 or 10; 3 by default), with a crossfade, like the old Windows Media Player did; pick one from the list to pin it.
+Eight visualizers (Bars, Waveform, Radial, Spectrogram, Particles, Tunnel, Plasma, Starfield), the four Windows Media Player
+style presets, four built-in themes and a Shuffle Colors button, all ported from the desktop app. **Auto** mode (the default)
+switches between the visualizers every few minutes (2, 3, 5 or 10; 3 by default), with a crossfade, like the old Windows Media
+Player did; pick one from the list to pin it.
 
-This is a demo. The Windows app adds per-app audio capture, now-playing with album art and transport controls, the
-spinning vinyl / CD disc, mini players, custom visualizer and theme editors, and optional Spotify sign-in.
+- **Custom visualizers.** Press *Customize* to copy any visualizer into an editable one: stack up to eight layers (bars, wave,
+  radial, rings, scope, particles, blobs), bind any parameter to bass, mid, treble, beat or loudness, and add trails, zoom,
+  rotation, hue cycling and a kaleidoscope. Randomize, duplicate, export and import. They are kept in your browser.
+- **Custom themes.** *Customize theme* edits a copy of the current theme live, with import and export.
+- **Spinning disc.** A vinyl record or CD that spins up and coasts down with the audio, with the visualizer playing across its face.
+- **Compatible with the Windows app.** Visualizer and theme files use the same JSON as the desktop app, so you can export from one
+  and import into the other.
+
+This is a demo. The Windows app adds per-app audio capture, now-playing with album art (on the disc too) and transport
+controls, mini players, and optional Spotify sign-in.
 
 ## Develop
 
@@ -34,6 +43,9 @@ Browsers only start audio after a click, which is why nothing plays until a sour
 | FFT bands, bass / mid / treble, beat detection (port of the app's `FftAnalyzer`) | `src/audio/analyzer.ts` |
 | Synthesized demo loop | `src/audio/demo.ts` |
 | Visualizers (Canvas 2D ports of the app's SkiaSharp ones) | `src/viz/` |
+| Custom visualizer model, layers, presets and the list that stores them | `src/viz/custom/`, `src/viz/catalog.ts` |
+| Spinning disc | `src/disc/` |
+| Editor panels | `src/ui/` |
 | Auto mode: shuffled rotation and crossfade | `src/viz/switcher.ts` |
 | Themes and the random palette generator | `src/theme/theme.ts` |
 

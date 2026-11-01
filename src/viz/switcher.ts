@@ -45,6 +45,8 @@ export class VisualizerSwitcher {
   /** Moves to the next visualizer in the bag, restarting the timer and the crossfade. */
   advance(now: number): void {
     if (this.all.length < 2) return;
+    // Skip anything deleted since the bag was filled.
+    this.bag = this.bag.filter((v) => this.all.includes(v) && v !== this.current);
     if (this.bag.length === 0) this.bag = shuffled(this.all.filter((v) => v !== this.current));
     this.previous = this.current;
     this.current = this.bag.pop()!;
@@ -54,6 +56,13 @@ export class VisualizerSwitcher {
 
   /** Call once per frame. */
   update(now: number): void {
+    // The current visualizer may have been deleted from the list.
+    if (!this.all.includes(this.current)) {
+      this.previous = undefined;
+      this.current = this.all[Math.floor(Math.random() * this.all.length)];
+      this.nextAt = now + this.intervalSec * 1000;
+    }
+    if (this.previous && !this.all.includes(this.previous)) this.previous = undefined;
     if (this.auto && now >= this.nextAt) this.advance(now);
     if (this.previous && now - this.fadeStart >= FADE_MS) this.previous = undefined;
   }
