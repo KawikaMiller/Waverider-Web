@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Waverider Web</title>
+    <meta name="description" content="A browser demo of Waverider, the audio visualizer for Windows. Visualize system audio, your microphone, a file, or a built-in demo track." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="/" aria-label="Waverider Web">
+        <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 18c3 0 3-10 6-10s3 16 6 16 3-22 6-22 3 16 6 16 2-6 2-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Waverider</span>
+        <span class="chip">Web demo</span>
+      </a>
+      <div class="top-actions">
+        <label class="field">
+          <span class="sr-only">Theme</span>
+          <select id="theme" aria-label="Theme"></select>
+        </label>
+        <button id="shuffle" type="button" class="btn" title="Random colors">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Shuffle colors</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="banner" role="note">
+      <p>
+        <strong>This is a web demo.</strong> The Windows app adds per-app audio capture, now-playing with album
+        art and controls, the spinning disc, mini players and Spotify sign-in.
+      </p>
+      <a class="btn primary" id="download" href="https://github.com/KawikaMiller/Waverider" target="_blank" rel="noopener noreferrer">
+        Get Waverider for Windows <span class="sr-only">(opens in a new tab)</span>
+      </a>
+    </div>
+
+    <main>
+      <section class="stage" id="stage" aria-label="Visualizer">
+        <canvas id="canvas" role="img" aria-label="Audio visualization"></canvas>
+
+        <div class="overlay" id="start">
+          <h1>Pick something to listen to</h1>
+          <p class="lede">Waverider reacts to whatever audio you give it.</p>
+          <div class="sources">
+            <button type="button" class="source" data-source="system">
+              <strong>System audio</strong>
+              <span>Whatever your PC is playing: Spotify, YouTube, a game. Chrome or Edge on Windows.</span>
+            </button>
+            <button type="button" class="source" data-source="mic">
+              <strong>Microphone</strong>
+              <span>Music playing in the room.</span>
+            </button>
+            <button type="button" class="source" data-source="file">
+              <strong>Audio file</strong>
+              <span>Choose a file, or drop one here.</span>
+            </button>
+            <button type="button" class="source" data-source="demo">
+              <strong>Demo track</strong>
+              <span>A built-in loop. One click, no permissions.</span>
+            </button>
+          </div>
+          <p class="note" id="support-note" hidden></p>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="Controls">
+        <div class="now" aria-live="polite">
+          <span class="dot" id="dot" aria-hidden="true"></span>
+          <span id="status">Nothing playing</span>
+        </div>
+        <div class="control-row">
+          <label class="field grow">
+            <span>Visualizer</span>
+            <select id="visualizer"></select>
+          </label>
+          <div class="source-switch" role="group" aria-label="Audio source">
+            <button type="button" class="btn small" data-source="system">System</button>
+            <button type="button" class="btn small" data-source="mic">Mic</button>
+            <button type="button" class="btn small" data-source="file">File</button>
+            <button type="button" class="btn small" data-source="demo">Demo</button>
+          </div>
+          <button type="button" class="btn small" id="playpause" hidden>Pause</button>
+          <button type="button" class="btn small" id="stop" hidden>Stop</button>
+          <button type="button" class="btn small" id="fullscreen">Fullscreen</button>
+        </div>
+      </section>
+    </main>
+
+    <input type="file" id="file" accept="audio/*" hidden />
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
