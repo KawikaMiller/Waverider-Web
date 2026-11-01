@@ -58,3 +58,10 @@ export function hueOf(c: RGB): number {
 export function mixHex(from: string, to: string, amount: number): string {
   return toHex(lerp(parseHex(from), parseHex(to), amount));
 }
+
+/** h in degrees, s and v in 0..1. */
+export function toHsv(c: RGB): { h: number; s: number; v: number } {
+  const r = c.r / 255, g = c.g / 255, b = c.b / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  return { h: hueOf(c), s: max === 0 ? 0 : (max - min) / max, v: max };
+}

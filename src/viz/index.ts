@@ -10,15 +10,14 @@ import { WaveVisualizer } from "./wave";
 
 export type { Visualizer } from "./types";
 
-export function createVisualizers(): Visualizer[] {
-  return [
-    new BarsVisualizer(),
-    new WaveVisualizer(),
-    new RadialVisualizer(),
-    new SpectrogramVisualizer(),
-    new ParticleVisualizer(),
-    new TunnelVisualizer(),
-    new PlasmaVisualizer(),
-    new StarfieldVisualizer(),
-  ];
-}
+/** One factory per hand-coded visualizer, so anything that needs its own instance (the disc) can make one. */
+export const BUILT_IN_FACTORIES: Array<() => Visualizer> = [
+  () => new BarsVisualizer(),
+  () => new WaveVisualizer(),
+  () => new RadialVisualizer(),
+  () => new SpectrogramVisualizer(),
+  () => new ParticleVisualizer(),
+  () => new TunnelVisualizer(),
+  () => new PlasmaVisualizer(),
+  () => new StarfieldVisualizer(),
+];

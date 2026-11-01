@@ -1,13 +1,20 @@
 import "./style.css";
 import { AudioEngine, AudioError, SourceKind } from "./audio/engine";
-import { applyTheme, BUILT_IN_THEMES, randomTheme, Theme } from "./theme/theme";
-import { createVisualizers } from "./viz";
+import { DiscView } from "./disc/view";
+import type { DiscFace, DiscSkin } from "./disc/renderer";
+import { ThemeStore } from "./theme/store";
+import { applyTheme, randomTheme, Theme } from "./theme/theme";
+import { ThemeEditor } from "./ui/themeEditor";
+import { VisualizerEditor } from "./ui/visualizerEditor";
+import { VisualizerCatalog, VisualizerEntry } from "./viz/catalog";
 import { INTERVALS_SEC, VisualizerSwitcher } from "./viz/switcher";
+import type { Visualizer } from "./viz/types";
 
 const VIZ_KEY = "waverider-visualizer";
 const AUTO_VALUE = "auto";
 const INTERVAL_KEY = "waverider-auto-interval";
 const THEME_KEY = "waverider-theme";
+const DISC_KEY = "waverider-disc";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const canvas = $<HTMLCanvasElement>("canvas");
@@ -17,67 +24,130 @@ const status = $("status");
 const dot = $("dot");
 const supportNote = $("support-note");
 const vizSelect = $<HTMLSelectElement>("visualizer");
+const themeSelect = $<HTMLSelectElement>("theme");
 const autoOptions = $("auto-options");
 const autoInterval = $<HTMLSelectElement>("auto-interval");
 const nextViz = $<HTMLButtonElement>("next-viz");
-const themeSelect = $<HTMLSelectElement>("theme");
+const customizeViz = $<HTMLButtonElement>("customize-viz");
 const fileInput = $<HTMLInputElement>("file");
 const playPause = $<HTMLButtonElement>("playpause");
 const stopButton = $<HTMLButtonElement>("stop");
+const drawer = $("drawer");
+const drawerBody = $("drawer-body");
 
 const engine = new AudioEngine();
-const visualizers = createVisualizers();
-const switcher = new VisualizerSwitcher(visualizers);
-let theme: Theme = BUILT_IN_THEMES[0];
-const themes: Theme[] = [...BUILT_IN_THEMES];
+const catalog = new VisualizerCatalog();
+const switcher = new VisualizerSwitcher(catalog.visualizers);
+const themeStore = new ThemeStore();
 
 // ---- storage (best effort: it can be unavailable in private windows) ----
 const read = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
 const write = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* not persisted */ } };
 
 // ---- theme ----
+let theme: Theme = themeStore.builtIn[0];
+let tempTheme: Theme | undefined; // a shuffled palette that hasn't been saved as a custom theme
+
+function themeList(): Theme[] {
+  return tempTheme ? [...themeStore.all, tempTheme] : themeStore.all;
+}
+
 function refreshThemeSelect(): void {
-  themeSelect.replaceChildren(...themes.map((t, i) => new Option(t.name, String(i))));
-  themeSelect.value = String(themes.indexOf(theme));
+  const list = themeList();
+  themeSelect.replaceChildren(
+    ...list.map((t, i) => new Option(t.name, String(i), false, t === theme)),
+  );
+  themeSelect.value = String(list.indexOf(theme));
 }
 
 function setTheme(next: Theme): void {
   theme = next;
-  if (!themes.includes(next)) themes.push(next);
+  if (next !== tempTheme && !themeStore.all.includes(next)) tempTheme = next;
   applyTheme(theme);
+  disc.setTheme(theme);
   refreshThemeSelect();
   write(THEME_KEY, JSON.stringify(theme));
 }
 
-try {
-  const saved = JSON.parse(read(THEME_KEY) ?? "null") as Theme | null;
-  if (saved?.name && saved.primary) {
-    theme = BUILT_IN_THEMES.find((t) => t.name === saved.name) ?? saved;
-    if (!themes.includes(theme)) themes.push(theme);
-  }
-} catch { /* fall back to the default theme */ }
-applyTheme(theme);
-refreshThemeSelect();
+function restoreTheme(): void {
+  try {
+    const saved = JSON.parse(read(THEME_KEY) ?? "null") as Theme | null;
+    if (!saved?.name || !saved.primary) return;
+    const known = themeStore.all.find((t) => t.name === saved.name);
+    if (known) theme = known;
+    else { tempTheme = saved; theme = saved; }
+  } catch { /* fall back to the default theme */ }
+}
 
-themeSelect.addEventListener("change", () => setTheme(themes[Number(themeSelect.value)]));
+themeSelect.addEventListener("change", () => setTheme(themeList()[Number(themeSelect.value)]));
 $("shuffle").addEventListener("click", () => {
-  const shuffled = randomTheme();
-  // Keep a single "Shuffled" entry so the list doesn't grow with every click.
-  const existing = themes.findIndex((t) => t.name === "Shuffled");
-  if (existing >= 0) themes.splice(existing, 1);
-  setTheme(shuffled);
+  tempTheme = randomTheme();
+  setTheme(tempTheme);
+  if (themeEditorOpen()) themeEditor.open(theme);
 });
 
-// ---- visualizer ----
-// "Auto" rotates through the visualizers on a timer, like the old Windows Media Player did.
-// It is the default, so a first visit shows the variety.
-vizSelect.replaceChildren(
-  new Option("Auto (switch automatically)", AUTO_VALUE),
-  ...visualizers.map((v, i) => new Option(v.name, String(i))),
-);
+// ---- disc ----
+const disc = new DiscView($("disc"));
+const discSkin = $<HTMLSelectElement>("disc-skin");
+const discFace = $<HTMLSelectElement>("disc-face");
+const discSpin = $<HTMLInputElement>("disc-spin");
+const discSpinRow = $("disc-spin-row");
+let discInstanceFor: Visualizer | undefined;
+
+function applyDiscSettings(): void {
+  disc.setSkin(discSkin.value as DiscSkin);
+  disc.setFace(discFace.value as DiscFace);
+  disc.setVisualizerSpins(discSpin.checked);
+  discSpinRow.hidden = discFace.value !== "Visualizer";
+  write(DISC_KEY, JSON.stringify({ skin: discSkin.value, face: discFace.value, spin: discSpin.checked }));
+}
+try {
+  const saved = JSON.parse(read(DISC_KEY) ?? "null") as { skin?: string; face?: string; spin?: boolean } | null;
+  if (saved?.skin === "Vinyl" || saved?.skin === "Cd") discSkin.value = saved.skin;
+  if (saved?.face === "Art" || saved?.face === "Visualizer") discFace.value = saved.face;
+  discSpin.checked = !!saved?.spin;
+} catch { /* defaults */ }
+[discSkin, discFace, discSpin].forEach((c) => c.addEventListener("change", applyDiscSettings));
+
+/** The disc draws its own copy of whatever the stage shows, so the two can run at different sizes. */
+function syncDiscVisualizer(): void {
+  if (discInstanceFor === switcher.current) return;
+  discInstanceFor = switcher.current;
+  disc.setVisualizer(catalog.entryOf(switcher.current)?.make());
+}
+
+restoreTheme();
+applyTheme(theme);
+disc.setTheme(theme);
+applyDiscSettings();
+refreshThemeSelect();
+
+// ---- visualizer picker ----
+function option(label: string, value: string): HTMLOptionElement {
+  return new Option(label, value);
+}
+
+function rebuildVisualizerSelect(): void {
+  const groups: Array<[string, VisualizerEntry[]]> = [
+    ["Built in", catalog.entries.filter((e) => e.builtIn && !e.settings)],
+    ["Windows Media Player", catalog.entries.filter((e) => e.builtIn && e.settings)],
+    ["My visualizers", catalog.entries.filter((e) => !e.builtIn)],
+  ];
+  const children: Array<HTMLOptionElement | HTMLOptGroupElement> = [option("Auto (switch automatically)", AUTO_VALUE)];
+  for (const [label, entries] of groups) {
+    if (entries.length === 0) continue;
+    const group = document.createElement("optgroup");
+    group.label = label;
+    for (const e of entries) group.append(option(e.instance.name, String(catalog.entries.indexOf(e))));
+    children.push(group);
+  }
+  vizSelect.replaceChildren(...children);
+  autoLabel = "";
+  syncVisualizerUi();
+}
 
 function syncVisualizerUi(): void {
-  vizSelect.value = switcher.auto ? AUTO_VALUE : String(visualizers.indexOf(switcher.current));
+  vizSelect.value = switcher.auto ? AUTO_VALUE : String(catalog.visualizers.indexOf(switcher.current));
   autoOptions.hidden = !switcher.auto;
   nextViz.hidden = !switcher.auto;
 }
@@ -88,30 +158,37 @@ function updateAutoLabel(): void {
   const label = switcher.auto ? `Auto: ${switcher.current.name}` : "Auto (switch automatically)";
   if (label === autoLabel) return;
   autoLabel = label;
-  vizSelect.options[0].text = label;
+  const first = vizSelect.options[0];
+  if (first?.value === AUTO_VALUE) first.text = label;
+}
+
+function pin(visualizer: Visualizer): void {
+  switcher.select(visualizer);
+  write(VIZ_KEY, visualizer.name);
+  syncVisualizerUi();
 }
 
 function chooseVisualizer(value: string): void {
   if (value === AUTO_VALUE) {
     switcher.enableAuto(performance.now());
     write(VIZ_KEY, AUTO_VALUE);
+    syncVisualizerUi();
   } else {
-    const picked = visualizers[Number(value)];
-    switcher.select(picked);
-    write(VIZ_KEY, picked.name);
+    pin(catalog.visualizers[Number(value)]);
   }
-  syncVisualizerUi();
+  refreshCustomizeButton();
 }
 
 const savedInterval = Number(read(INTERVAL_KEY));
 if (INTERVALS_SEC.includes(savedInterval)) switcher.intervalSec = savedInterval;
 autoInterval.value = String(switcher.intervalSec);
 
-const savedViz = read(VIZ_KEY);
-const pinned = visualizers.find((v) => v.name === savedViz);
+const pinned = catalog.find(read(VIZ_KEY) ?? "");
 if (pinned) switcher.select(pinned);
-else switcher.enableAuto(performance.now()); // nothing saved, or "auto"
-syncVisualizerUi();
+else switcher.enableAuto(performance.now()); // nothing saved, or "auto"; it's the default so a first visit shows the variety
+
+catalog.onChange = () => { rebuildVisualizerSelect(); };
+rebuildVisualizerSelect();
 
 vizSelect.addEventListener("change", () => chooseVisualizer(vizSelect.value));
 autoInterval.addEventListener("change", () => {
@@ -119,6 +196,91 @@ autoInterval.addEventListener("change", () => {
   write(INTERVAL_KEY, autoInterval.value);
 });
 nextViz.addEventListener("click", () => switcher.advance(performance.now()));
+
+// ---- editor drawer ----
+type DrawerKind = "visualizer" | "theme";
+let drawerKind: DrawerKind | undefined;
+
+function openDrawer(kind: DrawerKind): void {
+  drawerKind = kind;
+  drawer.hidden = false;
+  refreshCustomizeButton();
+}
+
+function closeDrawer(): void {
+  drawerKind = undefined;
+  drawer.hidden = true;
+  drawerBody.replaceChildren();
+  refreshCustomizeButton();
+}
+
+const themeEditorOpen = () => drawerKind === "theme";
+
+const vizEditor = new VisualizerEditor(drawerBody, catalog, {
+  select(entry) {
+    pin(entry.instance);
+    refreshCustomizeButton();
+    vizEditor.open(entry);
+    openDrawer("visualizer");
+  },
+  deleted() {
+    closeDrawer();
+    syncVisualizerUi();
+  },
+  renamed() {
+    rebuildVisualizerSelect();
+    write(VIZ_KEY, switcher.auto ? AUTO_VALUE : switcher.current.name);
+  },
+  close: closeDrawer,
+});
+
+const themeEditor = new ThemeEditor(drawerBody, themeStore, {
+  select(next) { setTheme(next); themeEditor.open(next); openDrawer("theme"); },
+  changed(t) { disc.setTheme(t); refreshThemeSelect(); write(THEME_KEY, JSON.stringify(t)); },
+  deleted() { closeDrawer(); setTheme(themeStore.builtIn[0]); },
+  close: closeDrawer,
+});
+
+/** Customize edits your own visualizer; on a built-in, a preset or Auto it starts an editable copy. */
+function customizeVisualizer(): void {
+  const entry = catalog.entryOf(switcher.current);
+  if (entry && !entry.builtIn) {
+    if (drawerKind === "visualizer") { closeDrawer(); return; }
+    vizEditor.open(entry);
+    openDrawer("visualizer");
+    return;
+  }
+  // Copy whichever visualizer is showing (a preset keeps its look; a hand-coded one starts from the default).
+  const created = catalog.create(entry?.settings);
+  pin(created.instance);
+  vizEditor.open(created);
+  openDrawer("visualizer");
+}
+
+function customizeTheme(): void {
+  if (themeStore.isCustom(theme)) {
+    if (drawerKind === "theme") { closeDrawer(); return; }
+    themeEditor.open(theme);
+    openDrawer("theme");
+    return;
+  }
+  // Built-in or shuffled: edit a copy, so the original is never changed.
+  const copy = themeStore.add(theme, theme === tempTheme ? "" : " (copy)");
+  if (theme === tempTheme) tempTheme = undefined;
+  setTheme(copy);
+  themeEditor.open(copy);
+  openDrawer("theme");
+}
+
+function refreshCustomizeButton(): void {
+  const entry = catalog.entryOf(switcher.current);
+  const editing = !!entry && !entry.builtIn && drawerKind === "visualizer" && vizEditor.target === entry;
+  customizeViz.textContent = editing ? "Close editor" : "Customize";
+}
+
+customizeViz.addEventListener("click", customizeVisualizer);
+$("customize-theme").addEventListener("click", customizeTheme);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !drawer.hidden) closeDrawer(); });
 
 // ---- canvas sizing ----
 const ctx = canvas.getContext("2d")!;
@@ -272,9 +434,14 @@ function frame(now: number): void {
     switcher.current.render(ctx, w, h, audio, theme, t);
   }
 
+  syncDiscVisualizer();
+  const playing = !!engine.active && !engine.fileElement?.paused;
+  disc.frame(now, audio, playing, t);
+
   updateAutoLabel();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
 syncControls();
+refreshCustomizeButton();
