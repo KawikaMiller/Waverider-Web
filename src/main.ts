@@ -258,12 +258,16 @@ function frame(now: number): void {
     outgoing.render(fadeCtxA, w, h, audio, theme, t);
     switcher.current.render(fadeCtxB, w, h, audio, theme, t);
     const p = switcher.fadeProgress(now);
+    // Weights that sum to 1, added together: two opaque pictures dissolve without the stage showing through
+    // mid-fade (plain alpha blending would dip to 75% opacity there).
     ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 1 - p;
     ctx.drawImage(fadeA, 0, 0);
     ctx.globalAlpha = p;
     ctx.drawImage(fadeB, 0, 0);
     ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
   } else {
     switcher.current.render(ctx, w, h, audio, theme, t);
   }
